@@ -32,13 +32,6 @@ if ($regex == 1) {
 
 $type = $_POST['type'];
 
-$tap1_iface = $_POST['tap1_iface'];
-$tap1_ip = $_POST['tap1_ip'];
-$hostapd_ssid = $_POST['hostapd_ssid'];
-$hostapd_wpa_passphrase = $_POST['hostapd_wpa_passphrase'];
-$hostapd_secure = $_POST['hostapd_secure'];
-
-
 $tap_mode = $_POST["tap_mode"];
 $ap_mode = $_POST["ap_mode"];
 
@@ -47,16 +40,13 @@ $tap1_set = $_POST["tap1_set"];
 $tap1_ip = $_POST["tap1_ip"];
 $tap1_mask = $_POST["tap1_mask"];
 $tap1_gw = $_POST["tap1_gw"];
+$tap1_iface_route = $_POST["tap1_iface_route"];
 
 $tap2_iface = $_POST["tap2_iface"];
 $tap2_set = $_POST["tap2_set"];
 $tap2_ip = $_POST["tap2_ip"];
 $tap2_mask = $_POST["tap2_mask"];
 $tap2_gw = $_POST["tap2_gw"];
-
-$hostapd_secure = $_POST["hostapd_secure"];
-$hostapd_ssid = $_POST["hostapd_ssid"];
-$hostapd_wpa_passphrase = $_POST["hostapd_wpa_passphrase"];
 
 // ------------ IN | OUT (START) -------------
 if(isset($_POST["tap_mode"])){
@@ -94,6 +84,7 @@ if(isset($_POST["tap1_iface"])){
     exec_fruitywifi($exec);
     
     $exec = "/bin/sed -i 's/interface=.*/interface=".$_POST["tap1_iface"]."/g' $mod_path/includes/conf/dnsmasq.conf";
+	//$exec = "/bin/sed -i 's/interface=.*/interface=bridge0/g' $mod_path/includes/conf/dnsmasq.conf";
     exec_fruitywifi($exec);
     
     //EXTRACT MACADDRESS
@@ -121,6 +112,7 @@ if(isset($_POST["tap1_iface"])){
         $exec = "/bin/sed -i 's/interface=.*/interface=".$_POST["tap1_iface"]."/g' $mod_path/includes/conf/dnsmasq.conf";
 		exec_fruitywifi($exec);
     }
+	
 }
 
 if(isset($_POST["tap1_set"])){
@@ -155,6 +147,14 @@ if(isset($_POST["tap1_gw"])){
     $exec = "/bin/sed -i 's/tap1_gw=.*/tap1_gw=\\\"".$_POST["tap1_gw"]."\\\";/g' options_config.php";
     exec_fruitywifi($exec);
 }
+
+// [TAP1] ROUTE
+if(isset($_POST["tap1_iface_route"])){
+    $exec = "/bin/sed -i 's/tap1_iface_route=.*/tap1_iface_route=\\\"".$_POST["tap1_iface_route"]."\\\";/g' options_config.php";
+    exec_fruitywifi($exec);
+}
+
+// ---- TAP 2 ---->
 
 if(isset($_POST["tap2_iface"])){
     $exec = "/bin/sed -i 's/tap2_iface=.*/tap2_iface=\\\"".$_POST["tap2_iface"]."\\\";/g' options_config.php";

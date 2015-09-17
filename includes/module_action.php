@@ -123,6 +123,32 @@ function copyLogsHistory() {
 	}
 }
 
+function cleanTAP() {
+		
+		global $tap1_iface;
+		global $tap2_iface;
+		global $bin_ifconfig;
+		global $tap2_set;
+		
+		// CLEAN
+		$exec = "/etc/init.d/dhcpcd stop";
+		exec_fruitywifi($exec);
+		
+		killRegex("dhcpcd.+$tap2_iface");
+		
+		$exec = "$bin_ifconfig $tap1_iface down";
+		exec_fruitywifi($exec);
+		$exec = "$bin_ifconfig $tap1_iface 0.0.0.0";
+		exec_fruitywifi($exec);
+
+		if ($tap2_set != "3") { // TAP2 SET: CURRENT		
+			$exec = "$bin_ifconfig $tap2_iface down";
+			exec_fruitywifi($exec);
+			$exec = "$bin_ifconfig $tap2_iface 0.0.0.0";
+			exec_fruitywifi($exec);	
+}		}
+
+// [TAP MODE] PASSIVE
 if($tap_mode == "1") {
 	if ($action == "start") {
 		
@@ -154,50 +180,73 @@ if($tap_mode == "1") {
 	}
 }
 
+// [TAP MODE] ACTIVE
 if($tap_mode == "2") {
 	if ($action == "start") {
 		
-		$exec = "/etc/init.d/dhcpcd stop";
-		exec_fruitywifi($exec);
+		// RESET TAP1/2
+		cleanTAP();
 		
-		killRegex("dhcpcd.+$tap2_iface");
-		
-		$exec = "$bin_ifconfig $tap1_iface down";
+		// CREATE BRIDGE
+		$exec = "brctl addbr bridge0";
 		exec_fruitywifi($exec);
-		$exec = "$bin_ifconfig $tap1_iface 0.0.0.0";
-		exec_fruitywifi($exec);
-		
-		$exec = "$bin_ifconfig $tap2_iface down";
-		exec_fruitywifi($exec);
-		$exec = "$bin_ifconfig $tap2_iface 0.0.0.0";
+		$exec = "brctl addif bridge0 $tap1_iface";
+		//exec_fruitywifi($exec);
+		$exec = "brctl addif bridge0 $tap2_iface";
+		//exec_fruitywifi($exec);
+		$exec = "$bin_ifconfig bridge0 up";
 		exec_fruitywifi($exec);
 		
 		// TAP2
-		$exec = "dhcpcd -i $tap2_iface";
-		exec_fruitywifi($exec);
+		if ($tap2_set == "0") { // TAP2 SET: DHCP
+			
+			$exec = "dhclient $tap2_iface";
+			exec_fruitywifi($exec);
+			
+			//$exec = "dhcpcd -i $tap2_iface";
+			//exec_fruitywifi($exec);
+			
+		} else if ($tap2_set == "1") { // TAP2 SET: STATIC
+			
+			$exec = "$bin_ifconfig $tap2_iface up";
+			exec_fruitywifi($exec);
+			$exec = "$bin_ifconfig $tap2_iface up $tap2_ip netmask 255.255.255.0";
+			exec_fruitywifi($exec);
+			$exec = "route add default gw $tap2_gw";
+			exec_fruitywifi($exec);
+		
+		} else if ($tap2_set == "3") { // TAP2 SET: CURRENT
+			
+		}
 		
 		// TAP1
-		$exec = "$bin_ifconfig $tap1_iface up";
-		exec_fruitywifi($exec);
-		$exec = "$bin_ifconfig $tap1_iface up $tap1_ip netmask 255.255.255.0";
-		exec_fruitywifi($exec);
+		if ($tap1_set == "2") { // TAP1 SET: DNSMASQ
+			
+			$exec = "$bin_ifconfig $tap1_iface up";
+			exec_fruitywifi($exec);
+			$exec = "$bin_ifconfig $tap1_iface up $tap1_ip netmask 255.255.255.0";
+			exec_fruitywifi($exec);
+			
+			$exec = "$bin_dnsmasq -C $mod_path/includes/conf/dnsmasq.conf";
+			exec_fruitywifi($exec);
+			
+			// IPTABLES	FLUSH	
+			flushIptables();
+			
+			$exec = "$bin_echo 1 > /proc/sys/net/ipv4/ip_forward";
+			exec_fruitywifi($exec);
+			
+			if ($tap1_iface_route != "-") $tap_route = $tap1_iface_route; else $tap_route = $tap2_iface;
+			$exec = "$bin_iptables -t nat -A POSTROUTING -o $tap_route -j MASQUERADE";
+			exec_fruitywifi($exec);
+		}
 		
-		$exec = "$bin_echo 'nameserver $tap1_ip\nnameserver 8.8.8.8' > /etc/resolv.conf ";
-		exec_fruitywifi($exec);
+		// DEV...
+		//$exec = "$bin_ifconfig $tap1_iface 0.0.0.0";
+		//exec_fruitywifi($exec);
+		//$exec = "$bin_ifconfig bridge0 $tap1_ip netmask 255.255.255.0 up";
+		//exec_fruitywifi($exec);
 		
-		$exec = "chattr +i /etc/resolv.conf";
-        exec_fruitywifi($exec);
-		
-		$exec = "$bin_dnsmasq -C $mod_path/includes/conf/dnsmasq.conf";
-		exec_fruitywifi($exec);
-		
-		// IPTABLES	FLUSH	
-		flushIptables();
-		
-		$exec = "$bin_echo 1 > /proc/sys/net/ipv4/ip_forward";
-		exec_fruitywifi($exec);
-		$exec = "$bin_iptables -t nat -A POSTROUTING -o $tap2_iface -j MASQUERADE";
-		exec_fruitywifi($exec);
 		
 	} else {
 		
@@ -211,15 +260,28 @@ if($tap_mode == "2") {
 
 		killRegex("dnsmasq.+$mod_name.+dnsmasq");
 		
+		// REMOVE BRIDGE
+		$exec = "brctl delif bridge0 $tap1_iface";
+		exec_fruitywifi($exec);
+		$exec = "brctl delif bridge0 $tap2_iface";
+		exec_fruitywifi($exec);
+		$exec = "$bin_ifconfig bridge0 down";
+		exec_fruitywifi($exec);
+		$exec = "brctl delbr bridge0";
+		exec_fruitywifi($exec);
+		
+		// CLEAN IFACES
 		$exec = "$bin_ifconfig $tap1_iface down";
 		exec_fruitywifi($exec);
 		$exec = "$bin_ifconfig $tap1_iface 0.0.0.0";
 		exec_fruitywifi($exec);
 		
-		$exec = "$bin_ifconfig $tap2_iface down";
-		exec_fruitywifi($exec);
-		$exec = "$bin_ifconfig $tap2_iface 0.0.0.0";
-		exec_fruitywifi($exec);
+		if ($tap2_set != "3") { // TAP2 SET: CURRENT
+			$exec = "$bin_ifconfig $tap2_iface down";
+			exec_fruitywifi($exec);
+			$exec = "$bin_ifconfig $tap2_iface 0.0.0.0";
+			exec_fruitywifi($exec);
+		}
 		
 		// IPTABLES	FLUSH	
 		flushIptables();

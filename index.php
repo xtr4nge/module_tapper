@@ -227,6 +227,7 @@ Loading, please wait...
                         <!-- SUB IN  -->
                         <div id="div_in" name="div_in" <? if($tap_mode == 5) echo "style='visibility: hidden;'"?> >
                         <table cellpadding="0" CELLSPACING="0">
+                            
                             <tr>
                             
                             <td style="padding-right:10px" nowrap>
@@ -253,8 +254,11 @@ Loading, please wait...
                             <td style="padding-right:10px" nowrap>
                                 <form action="includes/save.php" method="post" style="margin:0px">
                                     <select class="form-control input-sm" onchange="this.form.submit()" name="tap1_set">
+                                        <option value="2" <? if($tap1_set == "2") echo "selected" ?> >[DNSMASQ]</option>
+                                        <? /*
                                         <option value="1" <? if($tap1_set == "1") echo "selected" ?> >[Static]</option>
                                         <option value="0" <? if($tap1_set == "0") echo "selected" ?> >[DHCP]</option>
+                                        */ ?>
                                     </select>
                                 </form>
                                 <?
@@ -295,6 +299,29 @@ Loading, please wait...
                                 ?>
                             </td>
                             </tr>
+                            
+                            <!-- ROUTE START -->
+                            <tr>
+                            
+                            <td style="padding-right:10px" nowrap>
+                                <br>ROUTE
+                                <form action="includes/save.php" method="post" style="margin:0px">
+                                    <select class="form-control input-sm" style='width:140px' onchange="this.form.submit()" name="tap1_iface_route">
+                                    <option>-</option>
+                                    <?
+                                    for ($i = 0; $i < count($ifaces); $i++) {
+                                        if (strpos($ifaces[$i], "mon") === false) {
+                                        if ($tap1_iface_route == $ifaces[$i]) $flag = "selected" ; else $flag = "";
+                                        echo "<option $flag>$ifaces[$i]</option>";
+                                        }
+                                    }
+                                    ?>
+                                    </select>
+                                </form>
+                            </td>
+                            </tr>
+                            <!-- ROUTE END -->
+                            
                             </form>
                             <? } ?>
                         </table>
@@ -333,12 +360,13 @@ Loading, please wait...
                             <td style="padding-right:10px" nowrap>
                             <form action="includes/save.php" method="post" style="margin:0px">
                                 <select class="form-control input-sm" onchange="this.form.submit()" name="tap2_set">
-                                    <option value="1" <? if($tap2_set == "1") echo "selected" ?> >[Static]</option>
                                     <option value="0" <? if($tap2_set == "0") echo "selected" ?> >[DHCP]</option>
+                                    <option value="1" <? if($tap2_set == "1") echo "selected" ?> >[Static]</option>
+                                    <option value="3" <? if($tap2_set == "3") echo "selected" ?> >[Current]</option>
                                 </select>
                             </form>
                             <?
-                                if($tap2_set == "0") {
+                                if($tap2_set == "0" or $tap2_set == "3") {
                                 $tmp_ip = exec("/sbin/ifconfig $tap2_iface | grep 'inet addr:' | cut -d: -f2 |awk '{print $1}'");
                                 echo "<input class='form-control input-sm' placeholder='IP' style='width:140px' value='$tmp_ip' disabled>";
                                 }
@@ -347,19 +375,19 @@ Loading, please wait...
                             </tr>
                             
                             <form action="includes/save.php" method="post" style="margin:0px">
-                            <tr <? if($tap2_set == "0") echo "style='display:none;'"?> >
+                            <tr <? if($tap2_set == "0" or $tap2_set == "3") echo "style='display:none;'"?> >
                 
                             <td style="padding-right:10px"><input class="form-control input-sm" placeholder="IP" name="tap2_ip" style="width:140px" value="<?=$tap2_ip?>"></td>
                             </tr>
-                            <tr <? if($tap2_set == "0") echo "style='display:none;'"?> >
+                            <tr <? if($tap2_set == "0" or $tap2_set == "3") echo "style='display:none;'"?> >
                 
                             <td style="padding-right:10px"><input class="form-control input-sm" placeholder="MASK" name="tap2_mask" style="width:140px" value="<?=$tap2_mask?>"></td>
                             </tr>
-                            <tr <? if($tap2_set == "0") echo "style='display:none;'"?> >
+                            <tr <? if($tap2_set == "0" or $tap2_set == "3") echo "style='display:none;'"?> >
                 
                             <td style="padding-right:10px"><input class="form-control input-sm" placeholder="GW" name="tap2_gw" style="width:140px" value="<?=$tap2_gw?>"></td>
                             </tr>
-                            <tr <? if($tap2_set == "0") echo "style='display:none;'"?> >
+                            <tr <? if($tap2_set == "0" or $tap2_set == "3") echo "style='display:none;'"?> >
                 
                             <td style="padding-right:10px">
                                 <input class="btn btn-primary btn-sm" type="submit" value="Save">
